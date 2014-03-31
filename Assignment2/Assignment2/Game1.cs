@@ -8,6 +8,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Net;
 using Microsoft.Xna.Framework.Storage;
+using Microsoft.Xna.Framework.Media;
 
 namespace Assignment2
 {
@@ -18,24 +19,18 @@ namespace Assignment2
 	{
 		GraphicsDeviceManager graphics;
 		SpriteBatch spriteBatch;
-		private Texture2D playerTexture, balls;
-		private float _angle;
-		private Vector2 playerPosition;
-		int playerHeight;
-		int playerWidth;
-		private Vector2 playerDirection;
-		private Vector2 ballPosition;
 
-		private Random _rand = new Random();
-		private int _frame = 0;
-		private int _iter = 0;
-		private int ballNo = 0;
-		int ballSize = 60;
+		private Random rand = new Random();
+		private int iter = 0;
 		int state = 0;
-		SpriteEffects facing;
-		int movementSpeed = 40;
+		int score=0;
 
-		List<Sprite> sprites;
+		Player player;
+		List<Collectable> items;
+
+		SpriteFont scoreFont;
+		Vector2 FontPos;
+		Song music;
 
 		public Game1()
 		{
@@ -52,16 +47,7 @@ namespace Assignment2
 		protected override void Initialize()
 		{
 			// TODO: Add your initialization logic here
-			_angle = 0.0f;
-			playerPosition = new Vector2(68, 50);
-			playerDirection = new Vector2(3, 3);
-			playerHeight = 200;
-			playerWidth = 200;
-
-			ballPosition.X = _rand.Next(GraphicsDevice.Viewport.Width);
-			ballPosition.Y = _rand.Next(GraphicsDevice.Viewport.Height);
-
-			sprites=new List<Sprite>();
+			MediaPlayer.Volume = 1.0f;
 
 			base.Initialize();
 		}
@@ -75,8 +61,19 @@ namespace Assignment2
 			// Create a new SpriteBatch, which can be used to draw textures.
 			spriteBatch = new SpriteBatch(GraphicsDevice);
 
-			sprites.Add(new Player(spriteBatch, Content));
+//			music = Content.Load<Song> ("BennyHillTheme");
+//			MediaPlayer.Play (music);
+
+			items=new List<Collectable>();
+			player = new Player (spriteBatch, Content);
+			items.Add(new Collectable(spriteBatch, Content, rand.Next(GraphicsDevice.Viewport.Width), 0));
 			// TODO: use this.Content to load your game content here
+
+			scoreFont = Content.Load<SpriteFont> ("SpriteFont1");
+
+			FontPos = new Vector2(graphics.GraphicsDevice.Viewport.Width / 2,
+				graphics.GraphicsDevice.Viewport.Height / 10);
+
 		}
 
 		/// <summary>
@@ -98,12 +95,22 @@ namespace Assignment2
 			KeyboardState keys = Keyboard.GetState(); // Q to Quit 
 			if (keys.IsKeyDown(Keys.Q)) this.Exit();
 
+			player.advance ();
 			// #4 Advance each of the sprites 
-			foreach (Sprite s in sprites)
+			foreach (Collectable i in items)
 			{
-				s.advance();
+				i.advance();
+				if (i.isActive && CheckForCollision (i)) {
+					score++;
+					i.isActive = false;
+				}
 			}
 
+			if (iter % 30==0) {
+				items.Add (new Collectable(spriteBatch, Content, rand.Next(GraphicsDevice.Viewport.Width), 0));
+				iter = 0;
+			}
+			iter++;
 			base.Update(gameTime);
 		}
 
@@ -113,25 +120,35 @@ namespace Assignment2
 		/// <param name="gameTime">Provides a snapshot of timing values.</param>
 		protected override void Draw(GameTime gameTime)
 		{
-			GraphicsDevice.Clear(Color.Black);
+			GraphicsDevice.Clear(Color.GhostWhite);
 
 			// #5 Draw each sprite 
 			spriteBatch.Begin();
-			foreach (Sprite s in sprites)
+
+			spriteBatch.DrawString (scoreFont, score.ToString(), FontPos, Color.Black);
+
+			player.draw ();
+
+			foreach (Collectable i in items)
 			{
-				s.draw();
+				if (i.isActive) {
+					i.draw ();
+				}
 			}
+
 			spriteBatch.End();
 
 			base.Draw(gameTime); 
 
 		}
-		private Boolean CheckForCollision()
+		private Boolean CheckForCollision(Sprite i)
 		{
-			if (playerPosition.X > ballPosition.X && playerPosition.X<ballPosition.X+ballSize && playerPosition.Y >ballPosition.Y && playerPosition.Y<ballPosition.Y+ballSize)
+			if(player.X < (i.X + (i.Width/2)) && (player.X + player.Width) > (i.X + (i.Height/2)) &&
+				player.Y < (i.Y + (i.Height/2)) && (player.Y + player.Height) > (i.Y + (i.Height/2))){
 				return true;
+			}
 
-			else return false;
+			return false;
 		}
 	}
 }
